@@ -7,6 +7,7 @@ import * as React from 'react'
 
 import Game from '../components/Game/Game.tsx'
 import { Hatetris0, Hatetris1 } from './hatetris-ai.ts'
+import { Player0 } from './../player-ais/player-ai.ts'
 import hatetrisRotationSystem from '../rotation-systems/hatetris-rotation-system.ts'
 
 // Note: well bits are flipped compared to what you would see on the screen.
@@ -19,7 +20,9 @@ describe('HatetrisAi', () => {
       <Game
         bar={4}
         EnemyAi={Hatetris0}
+        PlayerAi={Player0}
         replayTimeout={0}
+        AItimeout={1}
         rotationSystem={hatetrisRotationSystem}
         wellDepth={8}
         wellWidth={10}
@@ -143,7 +146,9 @@ describe('HatetrisAi', () => {
       <Game
         bar={4}
         EnemyAi={Hatetris1}
+        PlayerAi={Player0}
         replayTimeout={0}
+        AItimeout={1}
         rotationSystem={hatetrisRotationSystem}
         wellDepth={8}
         wellWidth={10}

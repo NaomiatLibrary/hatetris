@@ -34,20 +34,31 @@ type GameWellState = {
 type GameProps = {
   bar: any,
   replayTimeout: number,
+  AItimeout: number,
   rotationSystem: RotationSystem,
   wellDepth: any,
   wellWidth: any,
-  EnemyAi: any
+  EnemyAi: any,
+  PlayerAi: any
 }
 
 type GameState = {
   enemyAi: any,
+  playerAi: any,
   firstWellState: GameWellState,
   mode: string,
   wellStateId: number,
   wellStates: GameWellState[],
   replay: any[],
-  replayTimeoutId: ReturnType<typeof setTimeout>
+  replayTimeoutId: ReturnType<typeof setTimeout>,
+  AItimeoutId: ReturnType<typeof setTimeout>,
+  AIparams:number[][],//子供たち
+  AIscores:number[],//子供のスコアたち
+  AIgeneration:number,//世代数
+  AInumber:number,//今プレイしている子供
+  AItopscore:number, //前の世代のトップスコア
+  AImeanscore:number, //前の世代の平均スコア
+  AItopparam:number[]
 }
 
 export type { GameWellState, GameProps }
@@ -61,7 +72,8 @@ class Game extends React.Component<GameProps, GameState> {
       bar,
       wellDepth,
       wellWidth,
-      EnemyAi
+      EnemyAi,
+      PlayerAi
     } = this.props
 
     if (rotationSystem.rotations.length < 1) {
@@ -77,6 +89,7 @@ class Game extends React.Component<GameProps, GameState> {
     }
 
     const enemyAi = EnemyAi(this)
+    const playerAi = PlayerAi(this)
 
     const firstWell = Array(wellDepth).fill(0)
 
@@ -88,17 +101,29 @@ class Game extends React.Component<GameProps, GameState> {
 
     this.state = {
       enemyAi,
+      playerAi,
       firstWellState,
       mode: 'GAME_OVER',
       wellStateId: -1,
       wellStates: [],
       replay: [],
-      replayTimeoutId: undefined
+      replayTimeoutId: undefined,
+      AItimeoutId: undefined,
+      AIparams:undefined,//子供たち
+      AIscores:undefined,//子供のスコアたち
+      AIgeneration:0,//世代数
+      AInumber:0,
+      AItopscore:0,
+      AImeanscore:0,
+      AItopparam:[0,0,0]
     }
 
     this.handleClickStart = this.handleClickStart.bind(this)
+    this.handleClickAIStart = this.handleClickAIStart.bind(this)
+    this.handleAIStart = this.handleAIStart.bind(this)
     this.handleClickReplay = this.handleClickReplay.bind(this)
     this.inputReplayStep = this.inputReplayStep.bind(this)
+    this.inputAIStep = this.inputAIStep.bind(this)
     this.handleLeft = this.handleLeft.bind(this)
     this.handleRight = this.handleRight.bind(this)
     this.handleUp = this.handleUp.bind(this)
@@ -157,6 +182,7 @@ class Game extends React.Component<GameProps, GameState> {
       ) // obstruction
     ) {
       if (move === 'D') {
+        nextScore+=1; //check:コマを置いただけで点数が来るようにした
         // Lock piece
         nextWell = wellState.well.slice()
 
@@ -188,7 +214,7 @@ class Game extends React.Component<GameProps, GameState> {
             // though of course the top line will always be blank anyway
             nextWell[0] = 0
 
-            nextScore++
+            nextScore+= 1000 //check:変えてみた
           }
         }
         nextPiece = null
@@ -208,13 +234,17 @@ class Game extends React.Component<GameProps, GameState> {
   handleClickStart () {
     const {
       firstWellState,
-      replayTimeoutId
+      replayTimeoutId,
+      AItimeoutId
     } = this.state
 
     // there may be a replay in progress, this
     // must be killed
     if (replayTimeoutId) {
       clearTimeout(replayTimeoutId)
+    }
+    if (AItimeoutId) {
+      clearTimeout(AItimeoutId)
     }
 
     // clear the field and get ready for a new game
@@ -223,18 +253,78 @@ class Game extends React.Component<GameProps, GameState> {
       wellStateId: 0,
       wellStates: [firstWellState],
       replay: [],
-      replayTimeoutId: undefined
+      replayTimeoutId: undefined,
+      AItimeoutId: undefined
     })
   }
 
+  handleClickAIStart () {
+    let aiparams=new Array();
+    for(var i=0;i<100;i++){
+      aiparams[i]=new Array();
+      for(var j=0;j<3;j++){
+        aiparams[i][j]=Math.floor(Math.random() * Math.floor(200))-100//-100~100
+      }
+    }
+    let aiscores=new Array();
+    for(var i=0;i<100;i++){
+      aiscores[i]=0;
+    }
+    this.setState({
+      AIparams:aiparams,
+      AIscores:aiscores,
+      AIgeneration:0,
+      AInumber:0,
+      AItopscore:0,
+      AImeanscore:0,
+      AItopparam:[0,0,0]
+    })
+    this.handleAIStart()
+    
+  }
+  handleAIStart () {
+    const {
+      AItimeout,
+    } = this.props
+
+    const {
+      firstWellState,
+      replayTimeoutId,
+      AItimeoutId,
+    } = this.state
+
+    // there may be a replay in progress, this
+    // must be killed
+    if (replayTimeoutId) {
+      clearTimeout(replayTimeoutId)
+    }
+    if (AItimeoutId) {
+      clearTimeout(AItimeoutId)
+    }
+
+    setTimeout(this.inputAIStep, AItimeout)
+
+    // clear the field and get ready for a new game
+    this.setState({
+      mode: 'AIPLAYING',
+      wellStateId: 0,
+      wellStates: [firstWellState],
+      replay: [],
+      replayTimeoutId: undefined,
+      AItimeoutId: undefined
+    })
+  }
+
+
   handleClickReplay () {
     const {
-      replayTimeout
+      replayTimeout,
     } = this.props
 
     let {
       firstWellState,
-      replayTimeoutId
+      replayTimeoutId,
+      AItimeoutId
     } = this.state
 
     // there may be a replay in progress, this
@@ -242,6 +332,10 @@ class Game extends React.Component<GameProps, GameState> {
     if (replayTimeoutId) {
       clearTimeout(replayTimeoutId)
       replayTimeoutId = undefined
+    }
+    if (AItimeoutId) {
+      clearTimeout(AItimeoutId)
+      AItimeoutId = undefined
     }
 
     // user inputs replay string
@@ -262,7 +356,8 @@ class Game extends React.Component<GameProps, GameState> {
       wellStateId: wellStateId,
       wellStates: [firstWellState],
       replay: replay,
-      replayTimeoutId: replayTimeoutId
+      replayTimeoutId: replayTimeoutId,
+      AItimeoutId: AItimeoutId
     })
   }
 
@@ -293,6 +388,146 @@ class Game extends React.Component<GameProps, GameState> {
       replayTimeoutId: nextReplayTimeoutId
     })
   }
+  inputAIStep () 
+  {
+    const {
+      bar,
+      rotationSystem,
+      wellWidth,
+      AItimeout,
+    } = this.props
+
+    const {
+      enemyAi,
+      playerAi,
+      mode,
+      replay,
+      wellStateId,
+      wellStates,
+      AInumber,
+      AIparams,
+      AIgeneration,
+      AIscores,
+      AItopscore,
+      AImeanscore,
+      AItopparam
+    } = this.state
+
+    let nextAITimeoutId
+
+    if(mode === 'AIPLAYING'){
+      //this.handleMove(playerAi(wellStates[wellStateId]))//todo:
+      const nextWellStateId = wellStateId + 1
+      let nextReplay
+      let nextWellStates
+      if (wellStateId in replay && "D" === replay[wellStateId]) {
+        nextReplay = replay
+        nextWellStates = wellStates
+      } else {
+        // Push the new move
+        nextReplay = replay.slice(0, wellStateId).concat("D")
+        // And truncate the future
+        nextWellStates = wellStates.slice(0, wellStateId + 1)
+      }
+      if (!(nextWellStateId in nextWellStates)) {
+        //パラメータを入力
+        const nextWellState = playerAi(wellStates[wellStateId],AIparams[AInumber])
+        nextWellStates = nextWellStates.slice().concat([nextWellState])
+      }
+      const nextWellState = nextWellStates[nextWellStateId]
+      // Is the game over?
+      // It is impossible to get bits at row (bar - 2) or higher without getting a bit at row (bar - 1),
+      // so there is only one line which we need to check.
+      const gameIsOver = nextWellState.well[bar - 1] !== 0
+      const nextMode = "AIPLAYING"
+
+      // no live piece? make a new one
+      // suited to the new world, of course
+      if (nextWellState.piece === null && !gameIsOver) {
+        // TODO: `nextWellState.well` should be more complex and contain colour
+        // information, whereas the well passed to `enemyAi` should be a simple
+        // array of integers
+        nextWellState.piece = rotationSystem.placeNewPiece(wellWidth, enemyAi(nextWellState.well))
+      }
+
+      nextAITimeoutId = gameIsOver ? undefined : setTimeout(this.inputAIStep, AItimeout)
+
+      this.setState({
+        mode: nextMode,
+        wellStateId: nextWellStateId,
+        wellStates: nextWellStates,
+        replay: nextReplay,
+        AItimeoutId: nextAITimeoutId
+      })
+
+      if(!gameIsOver)this.handleMove('D') //スコアの計算とか
+
+      if(gameIsOver){
+        //ゲームオーバー時の動作
+        this.handleAIStart()
+        //パラメータとスコアを記録
+        const wellState = wellStateId === -1 ? null : wellStates[wellStateId]
+        let score = wellState && wellState.score
+        let nextAInumber=AInumber==100-1?0:AInumber+1;
+        let nextAIscores=AIscores
+        nextAIscores[AInumber]=score
+        let nextAIparams=AIparams
+        let nextAIgeneration=AIgeneration
+        let nextAItopscore:number=AItopscore
+        let nextAImeanscore:number=AImeanscore
+        let nextAItopparam=AItopparam
+        //もし1世代が終了したら交配
+        if(nextAInumber==0){
+          nextAIgeneration=AIgeneration+1
+          nextAImeanscore=0
+          //交配とか突然変異とかをここに書く
+          //交配
+          //スコアが高い順に10個取り、10*10通りに掛け合わせる(前二つ｜後ろ一つ)
+          let scoretonumber:any[] =[]
+          for(var i=0;i<100;i++){
+            scoretonumber.push({'id':i,'score':nextAIscores[i]})
+            nextAImeanscore+=nextAIscores[i]
+          }
+          nextAImeanscore/=100.0
+          console.log(scoretonumber)
+          scoretonumber = scoretonumber.sort(function (a, b): any {
+            const scoreA = new Number(a['score']);
+            const scoreB = new Number(b['score']);
+            return scoreB > scoreA ? 1 : scoreB < scoreA ? -1 : 0; //sort by date decending
+          });
+          console.log(scoretonumber)
+          nextAItopparam = AIparams[scoretonumber[0]['id']]
+          let cnt=0
+          nextAItopscore=scoretonumber[0]['score']
+          scoretonumber.slice(0,10).forEach(num1 =>{
+            scoretonumber.slice(0,10).forEach(num2 =>{
+              nextAIparams[cnt][0]=AIparams[num1["id"]][0]
+              nextAIparams[cnt][1]=AIparams[num1["id"]][1]
+              nextAIparams[cnt][2]=AIparams[num2["id"]][2]
+              //突然変異
+              if(Math.random()<0.2){
+                let change=Math.floor(Math.random() * Math.floor(3))
+                nextAIparams[cnt][change]=Math.floor(Math.random() * Math.floor(200))-100//-100~100
+              }
+              cnt+=1
+            })
+          })
+        }
+        this.setState({
+          AInumber:nextAInumber,
+          AIscores:nextAIscores,
+          AIparams:nextAIparams,
+          AIgeneration:nextAIgeneration,
+          AItopscore:nextAItopscore,
+          AImeanscore:nextAImeanscore,
+          AItopparam:nextAItopparam
+        })
+      }
+
+    } else {
+      console.warn('Ignoring input ai step because mode is', mode)
+    }  
+  }
 
   // Accepts the input of a move and attempts to apply that
   // transform to the live piece in the live well.
@@ -306,6 +541,7 @@ class Game extends React.Component<GameProps, GameState> {
 
     const {
       enemyAi,
+      playerAi,
       mode,
       replay,
       wellStateId,
@@ -479,7 +715,12 @@ class Game extends React.Component<GameProps, GameState> {
       mode,
       replay,
       wellStateId,
-      wellStates
+      wellStates,
+      AIgeneration,
+      AInumber,
+      AItopscore,
+      AImeanscore,
+      AItopparam
     } = this.state
 
     const wellState = wellStateId === -1 ? null : wellStates[wellStateId]
@@ -518,6 +759,12 @@ class Game extends React.Component<GameProps, GameState> {
           </p>
 
           <p className='game__paragraph'>
+            <button className='game__aistart-button' type='button' onClick={this.handleClickAIStart}>
+              start ai playing
+            </button>
+          </p>
+
+          <p className='game__paragraph'>
             <button type='button' className='game__replay-button' onClick={this.handleClickReplay}>
               show a replay
             </button>
@@ -533,6 +780,13 @@ class Game extends React.Component<GameProps, GameState> {
             <span className='game__replay-out e2e__replay-out'>
               {replayOut}
             </span>
+          </p>
+          <p className='game__paragraph'>
+             generation:{AIgeneration}<br/>
+             topscore:{AItopscore}<br/>
+             meanscore:{AImeanscore}<br/>
+             topparam:{AItopparam}<br/>
+             child:{AInumber}<br/>
           </p>
 
           <div className='game__spacer' />

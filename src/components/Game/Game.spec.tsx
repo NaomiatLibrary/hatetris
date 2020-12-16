@@ -8,6 +8,7 @@ import * as React from 'react'
 import Game from './Game.tsx'
 import type { GameProps } from './Game.tsx'
 import { Hatetris0 } from '../../enemy-ais/hatetris-ai.ts'
+import { Player0 } from '../../player-ais/player-ai.ts'
 import hatetrisRotationSystem from '../../rotation-systems/hatetris-rotation-system.ts'
 
 jest.useFakeTimers()
@@ -18,7 +19,9 @@ describe('<Game>', () => {
       <Game
         bar={4}
         EnemyAi={Hatetris0}
+        PlayerAi={Player0}
         replayTimeout={0}
+        AItimeout={1}
         rotationSystem={hatetrisRotationSystem}
         wellDepth={20}
         wellWidth={10}
