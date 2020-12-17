@@ -434,6 +434,7 @@ class Game extends React.Component<GameProps, GameState> {
         const nextWellState = playerAi(wellStates[wellStateId],AIparams[AInumber])
         nextWellStates = nextWellStates.slice().concat([nextWellState])
       }
+      this.handleMove('D') //スコアの計算とか
       const nextWellState = nextWellStates[nextWellStateId]
       // Is the game over?
       // It is impossible to get bits at row (bar - 2) or higher without getting a bit at row (bar - 1),
@@ -460,7 +461,7 @@ class Game extends React.Component<GameProps, GameState> {
         AItimeoutId: nextAITimeoutId
       })
 
-      if(!gameIsOver)this.handleMove('D') //スコアの計算とか
+      
 
       if(gameIsOver){
         //ゲームオーバー時の動作
