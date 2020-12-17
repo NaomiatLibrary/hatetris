@@ -139,27 +139,20 @@ const PlayerAi = (options: Options) => (game: Game) => {
   const calculateHand = (well:GameWellState) : string[] =>{
     return ["D","L","D","L"]
   }
-  const pickHand = (well: GameWellState,param:number[]): GameWellState => {
+  const pickHand = (well: GameWellState,param:number): GameWellState => {
     //console.log(game)
     //console.log(well)
     //console.log(well)
     //console.log( calculateScore(well,[10,10,10]) )
     let possibleFutures=getPossibleFutures(well.well,well.piece.id,well.score)
-    let maxscore=-1001001001
-    let maxfuture=undefined
-    possibleFutures.forEach(future => {
-      let score=calculateScore(future,param)
-      if(maxscore<score){
-        maxfuture=future
-        maxscore=score
-      }
-    })
+    
     //let move=moves[Math.floor(Math.random() * Math.floor(4))]
     //console.log(move)
-    return maxfuture
+    //console.log(param%possibleFutures.length)
+    return possibleFutures[param%possibleFutures.length]
   }
 
-  return (well: GameWellState,param:number[]): GameWellState => pickHand(well,param)
+  return (well: GameWellState,param:number): GameWellState => pickHand(well,param)
   }
   
   export const Player0 = PlayerAi({ searchDepth: 0 })

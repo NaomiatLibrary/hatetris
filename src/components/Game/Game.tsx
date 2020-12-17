@@ -55,10 +55,11 @@ type GameState = {
   AIparams:number[][],//子供たち
   AIscores:number[],//子供のスコアたち
   AIgeneration:number,//世代数
-  AInumber:number,//今プレイしている子供
+  AIchild:number,//今プレイしている子供
   AItopscore:number, //前の世代のトップスコア
   AImeanscore:number, //前の世代の平均スコア
-  AItopparam:number[]
+  AItopparam:number[],
+  AIturn:number,//今何手めか
 }
 
 export type { GameWellState, GameProps }
@@ -112,10 +113,11 @@ class Game extends React.Component<GameProps, GameState> {
       AIparams:undefined,//子供たち
       AIscores:undefined,//子供のスコアたち
       AIgeneration:0,//世代数
-      AInumber:0,
+      AIchild:0,
       AItopscore:0,
       AImeanscore:0,
-      AItopparam:[0,0,0]
+      AItopparam:[0,0,0],
+      AIturn:0
     }
 
     this.handleClickStart = this.handleClickStart.bind(this)
@@ -260,24 +262,25 @@ class Game extends React.Component<GameProps, GameState> {
 
   handleClickAIStart () {
     let aiparams=new Array();
-    for(var i=0;i<100;i++){
+    for(var i=0;i<25;i++){
       aiparams[i]=new Array();
-      for(var j=0;j<3;j++){
-        aiparams[i][j]=Math.floor(Math.random() * Math.floor(200))-100//-100~100
+      for(var j=0;j<50;j++){
+        aiparams[i][j]=Math.floor(Math.random() * Math.floor(100))//0~100
       }
     }
     let aiscores=new Array();
-    for(var i=0;i<100;i++){
+    for(var i=0;i<25;i++){
       aiscores[i]=0;
     }
     this.setState({
       AIparams:aiparams,
       AIscores:aiscores,
       AIgeneration:0,
-      AInumber:0,
+      AIchild:0,
       AItopscore:0,
       AImeanscore:0,
-      AItopparam:[0,0,0]
+      AItopparam:[0,0,0],
+      AIturn:0
     })
     this.handleAIStart()
     
@@ -311,7 +314,8 @@ class Game extends React.Component<GameProps, GameState> {
       wellStates: [firstWellState],
       replay: [],
       replayTimeoutId: undefined,
-      AItimeoutId: undefined
+      AItimeoutId: undefined,
+      AIturn:0
     })
   }
 
@@ -404,13 +408,14 @@ class Game extends React.Component<GameProps, GameState> {
       replay,
       wellStateId,
       wellStates,
-      AInumber,
+      AIchild,
       AIparams,
       AIgeneration,
       AIscores,
       AItopscore,
       AImeanscore,
-      AItopparam
+      AItopparam,
+      AIturn
     } = this.state
 
     let nextAITimeoutId
@@ -431,7 +436,7 @@ class Game extends React.Component<GameProps, GameState> {
       }
       if (!(nextWellStateId in nextWellStates)) {
         //パラメータを入力
-        const nextWellState = playerAi(wellStates[wellStateId],AIparams[AInumber])
+        const nextWellState = playerAi(wellStates[wellStateId],AIparams[AIchild][AIturn])
         nextWellStates = nextWellStates.slice().concat([nextWellState])
       }
       const nextWellState = nextWellStates[nextWellStateId]
@@ -457,7 +462,8 @@ class Game extends React.Component<GameProps, GameState> {
         wellStateId: nextWellStateId,
         wellStates: nextWellStates,
         replay: nextReplay,
-        AItimeoutId: nextAITimeoutId
+        AItimeoutId: nextAITimeoutId,
+        AIturn:AIturn+1
       })
 
       if(!gameIsOver)this.handleMove('D') //スコアの計算とか
@@ -468,27 +474,27 @@ class Game extends React.Component<GameProps, GameState> {
         //パラメータとスコアを記録
         const wellState = wellStateId === -1 ? null : wellStates[wellStateId]
         let score = wellState && wellState.score
-        let nextAInumber=AInumber==100-1?0:AInumber+1;
+        let nextAIchild=AIchild==25-1?0:AIchild+1;
         let nextAIscores=AIscores
-        nextAIscores[AInumber]=score
+        nextAIscores[AIchild]=score
         let nextAIparams=AIparams
         let nextAIgeneration=AIgeneration
         let nextAItopscore:number=AItopscore
         let nextAImeanscore:number=AImeanscore
         let nextAItopparam=AItopparam
         //もし1世代が終了したら交配
-        if(nextAInumber==0){
+        if(nextAIchild==0){
           nextAIgeneration=AIgeneration+1
           nextAImeanscore=0
           //交配とか突然変異とかをここに書く
           //交配
-          //スコアが高い順に10個取り、10*10通りに掛け合わせる(前二つ｜後ろ一つ)
+          //スコアが高い順に10個取り、10*10通りに掛け合わせる(前25つ｜後ろ25つ)
           let scoretonumber:any[] =[]
-          for(var i=0;i<100;i++){
+          for(var i=0;i<25;i++){
             scoretonumber.push({'id':i,'score':nextAIscores[i]})
             nextAImeanscore+=nextAIscores[i]
           }
-          nextAImeanscore/=100.0
+          nextAImeanscore/=25.0
           console.log(scoretonumber)
           scoretonumber = scoretonumber.sort(function (a, b): any {
             const scoreA = new Number(a['score']);
@@ -499,22 +505,25 @@ class Game extends React.Component<GameProps, GameState> {
           nextAItopparam = AIparams[scoretonumber[0]['id']]
           let cnt=0
           nextAItopscore=scoretonumber[0]['score']
-          scoretonumber.slice(0,10).forEach(num1 =>{
-            scoretonumber.slice(0,10).forEach(num2 =>{
-              nextAIparams[cnt][0]=AIparams[num1["id"]][0]
-              nextAIparams[cnt][1]=AIparams[num1["id"]][1]
-              nextAIparams[cnt][2]=AIparams[num2["id"]][2]
+          scoretonumber.slice(0,5).forEach(num1 =>{
+            scoretonumber.slice(0,5).forEach(num2 =>{
+              for(var i=0;i<50;i+=2){
+                nextAIparams[cnt][i]=AIparams[num1["id"]][i]
+              }
+              for(var i=1;i<50;i+=2){
+                nextAIparams[cnt][i]=AIparams[num2["id"]][i]
+              }
               //突然変異
-              if(Math.random()<0.2){
+              if(Math.random()<0.4){
                 let change=Math.floor(Math.random() * Math.floor(3))
-                nextAIparams[cnt][change]=Math.floor(Math.random() * Math.floor(200))-100//-100~100
+                nextAIparams[cnt][change]=Math.floor(Math.random() * Math.floor(100))//-100~100
               }
               cnt+=1
             })
           })
         }
         this.setState({
-          AInumber:nextAInumber,
+          AIchild:nextAIchild,
           AIscores:nextAIscores,
           AIparams:nextAIparams,
           AIgeneration:nextAIgeneration,
@@ -717,10 +726,11 @@ class Game extends React.Component<GameProps, GameState> {
       wellStateId,
       wellStates,
       AIgeneration,
-      AInumber,
+      AIchild,
       AItopscore,
       AImeanscore,
-      AItopparam
+      AItopparam,
+      AIturn
     } = this.state
 
     const wellState = wellStateId === -1 ? null : wellStates[wellStateId]
@@ -786,7 +796,8 @@ class Game extends React.Component<GameProps, GameState> {
              topscore:{AItopscore}<br/>
              meanscore:{AImeanscore}<br/>
              topparam:{AItopparam}<br/>
-             child:{AInumber}<br/>
+             child:{AIchild}<br/>
+             turn:{AIturn}<br/>
           </p>
 
           <div className='game__spacer' />
