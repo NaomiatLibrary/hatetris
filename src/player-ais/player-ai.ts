@@ -102,15 +102,21 @@ const PlayerAi = (options: Options) => (game: Game) => {
     let deadspace = 0 //デットスペース(上下がブロックに囲まれている)の数
     let outstanding = 0 //突出した高低さ(平均との差が4以上)をもつ列の数
     let heightdiff = 0 //高低差の合計和
+    let highest = 0 //積まれているブロックの最大の高さ
+    let aveheight = 0 //積まれているブロックの高さの平均値
+    let deletelow = 0 //消せる列の数
     //let fourspace = 0 //壁沿い縦４マス以上のスペースがあるかどうか
     //ßconsole.log(well.well[0])
     for (var y = 0; y < 20; y++) {
+      let cntblock=0
       for (var x = 0; x < 10; x++){
         let isthisspace = (well.well[y] >> x ) & 1
+        if(!isthisspace)cntblock+=1
         let isupblockorwall = y>0? (well.well[y-1] >> x ) & 1 : 0
         let isdownblockorwall = y<20 ? (well.well[y+1] >> x ) & 1 : 1
         deadspace += isthisspace*isupblockorwall*isdownblockorwall
       }
+      if(cntblock==10)deletelow=1
     }
 
     //高さを記録する配列
@@ -119,22 +125,22 @@ const PlayerAi = (options: Options) => (game: Game) => {
       for (var x = 0; x < 10; x++){
         if( ((well.well[y] >> x ) & 1) == 1){
           if(heights[x]<20-y)heights[x]=20-y;
+          highest=Math.max(highest,heights[x])
         }
       }
     }
     //高さの平均
-    let ave=0
-    for(let height of heights)ave+=height
-    ave=ave/20
+    for(let height of heights)aveheight+=height
+    aveheight=aveheight/20
     //平均値から４以上高い/低い
     for (var x = 0; x < 10; x++){
-      if(heights[x]>=ave+4 || heights[x]<=ave-4)outstanding+=1
+      if(heights[x]>=aveheight+4 || heights[x]<=aveheight-4)outstanding+=1
     }
     //高低差
     for (var x = 0; x < 9; x++){
       heightdiff=Math.abs(heights[x]-heights[x+1])
     }
-    return deadspace*params[0]+outstanding*params[1]+heightdiff*params[2]
+    return deadspace*params[0]+outstanding*params[1]+heightdiff*params[2]+highest*params[3]+aveheight*params[4]+deletelow*params[5]
   }
   const calculateHand = (well:GameWellState) : string[] =>{
     return ["D","L","D","L"]

@@ -115,7 +115,7 @@ class Game extends React.Component<GameProps, GameState> {
       AInumber:0,
       AItopscore:0,
       AImeanscore:0,
-      AItopparam:[0,0,0]
+      AItopparam:[0,0,0,0,0,0]
     }
 
     this.handleClickStart = this.handleClickStart.bind(this)
@@ -262,7 +262,7 @@ class Game extends React.Component<GameProps, GameState> {
     let aiparams=new Array();
     for(var i=0;i<100;i++){
       aiparams[i]=new Array();
-      for(var j=0;j<3;j++){
+      for(var j=0;j<6;j++){
         aiparams[i][j]=Math.floor(Math.random() * Math.floor(200))-100//-100~100
       }
     }
@@ -277,7 +277,7 @@ class Game extends React.Component<GameProps, GameState> {
       AInumber:0,
       AItopscore:0,
       AImeanscore:0,
-      AItopparam:[0,0,0]
+      AItopparam:[0,0,0,0,0,0]
     })
     this.handleAIStart()
     
@@ -503,10 +503,13 @@ class Game extends React.Component<GameProps, GameState> {
             scoretonumber.slice(0,10).forEach(num2 =>{
               nextAIparams[cnt][0]=AIparams[num1["id"]][0]
               nextAIparams[cnt][1]=AIparams[num1["id"]][1]
-              nextAIparams[cnt][2]=AIparams[num2["id"]][2]
+              nextAIparams[cnt][2]=AIparams[num1["id"]][2]
+              nextAIparams[cnt][3]=AIparams[num2["id"]][3]
+              nextAIparams[cnt][4]=AIparams[num2["id"]][4]
+              nextAIparams[cnt][5]=AIparams[num2["id"]][5]
               //突然変異
               if(Math.random()<0.2){
-                let change=Math.floor(Math.random() * Math.floor(3))
+                let change=Math.floor(Math.random() * Math.floor(6))
                 nextAIparams[cnt][change]=Math.floor(Math.random() * Math.floor(200))-100//-100~100
               }
               cnt+=1
