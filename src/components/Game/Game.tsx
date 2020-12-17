@@ -262,14 +262,14 @@ class Game extends React.Component<GameProps, GameState> {
 
   handleClickAIStart () {
     let aiparams=new Array();
-    for(var i=0;i<25;i++){
+    for(var i=0;i<100;i++){
       aiparams[i]=new Array();
       for(var j=0;j<50;j++){
         aiparams[i][j]=Math.floor(Math.random() * Math.floor(100))//0~100
       }
     }
     let aiscores=new Array();
-    for(var i=0;i<25;i++){
+    for(var i=0;i<100;i++){
       aiscores[i]=0;
     }
     this.setState({
@@ -474,7 +474,7 @@ class Game extends React.Component<GameProps, GameState> {
         //パラメータとスコアを記録
         const wellState = wellStateId === -1 ? null : wellStates[wellStateId]
         let score = wellState && wellState.score
-        let nextAIchild=AIchild==25-1?0:AIchild+1;
+        let nextAIchild=AIchild==100-1?0:AIchild+1;
         let nextAIscores=AIscores
         nextAIscores[AIchild]=score
         let nextAIparams=AIparams
@@ -488,13 +488,13 @@ class Game extends React.Component<GameProps, GameState> {
           nextAImeanscore=0
           //交配とか突然変異とかをここに書く
           //交配
-          //スコアが高い順に10個取り、10*10通りに掛け合わせる(前25つ｜後ろ25つ)
+          //スコアが高い順に10個取り、10*10通りに掛け合わせる
           let scoretonumber:any[] =[]
-          for(var i=0;i<25;i++){
+          for(var i=0;i<100;i++){
             scoretonumber.push({'id':i,'score':nextAIscores[i]})
             nextAImeanscore+=nextAIscores[i]
           }
-          nextAImeanscore/=25.0
+          nextAImeanscore/=100.0
           console.log(scoretonumber)
           scoretonumber = scoretonumber.sort(function (a, b): any {
             const scoreA = new Number(a['score']);
@@ -505,8 +505,8 @@ class Game extends React.Component<GameProps, GameState> {
           nextAItopparam = AIparams[scoretonumber[0]['id']]
           let cnt=0
           nextAItopscore=scoretonumber[0]['score']
-          scoretonumber.slice(0,5).forEach(num1 =>{
-            scoretonumber.slice(0,5).forEach(num2 =>{
+          scoretonumber.slice(0,10).forEach(num1 =>{
+            scoretonumber.slice(0,10).forEach(num2 =>{
               for(var i=0;i<50;i+=2){
                 nextAIparams[cnt][i]=AIparams[num1["id"]][i]
               }
