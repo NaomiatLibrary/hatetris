@@ -116,7 +116,7 @@ const PlayerAi = (options: Options) => (game: Game) => {
         let isdownblockorwall = y<20 ? (well.well[y+1] >> x ) & 1 : 1
         deadspace += isthisspace*isupblockorwall*isdownblockorwall
       }
-      if(cntblock==10)deletelow=1
+      if(cntblock==10)deletelow+=1
     }
 
     //高さを記録する配列

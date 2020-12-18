@@ -20,7 +20,7 @@ ReactDOM.render(
       EnemyAi={Hatetris0}
       PlayerAi={Player0}
       replayTimeout={50}
-      AItimeout={1}
+      AItimeout={0}
       rotationSystem={hatetrisRotationSystem}
       wellDepth={20}
       wellWidth={10}

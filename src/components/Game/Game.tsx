@@ -509,7 +509,7 @@ class Game extends React.Component<GameProps, GameState> {
               nextAIparams[cnt][4]=AIparams[num2["id"]][4]
               nextAIparams[cnt][5]=AIparams[num2["id"]][5]
               //突然変異
-              if(Math.random()<0.2){
+              if(Math.random()<0.4){
                 let change=Math.floor(Math.random() * Math.floor(6))
                 nextAIparams[cnt][change]=Math.floor(Math.random() * Math.floor(200))-100//-100~100
               }
