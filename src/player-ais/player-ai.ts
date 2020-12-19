@@ -187,9 +187,6 @@ const PlayerAi = (options: Options) => (game: Game) => {
     }
     return deadspace*params[0]+outstanding*params[1]+heightdiff*params[2]+highest*params[3]+aveheight*params[4]+deletelow*params[5]
   }
-  const calculateHand = (well:GameWellState) : string[] =>{
-    return ["D","L","D","L"]
-  }
   const pickHand = (well: GameWellState,param:number[]): GameWellState => {
     //パラメータを使ってビームサーチを行う
     let maxfutureid=0
