@@ -8,6 +8,13 @@ const moves = ['L', 'R', 'D', 'U']
 interface Options {
   searchDepth: number
 }
+class Queue {
+  private data:any[] = [];
+  push(item:any) { this.data.push(item); }
+  pop() { return this.data.shift(); }
+  size() {return this.data.length}
+}
+
 //https://www.ieice.org/iss/jpn/Publications/issposter_2015/data/pdf/ISS-P-51.pdf
 const PlayerAi = (options: Options) => (game: Game) => {
     const {
@@ -39,7 +46,6 @@ const PlayerAi = (options: Options) => (game: Game) => {
 */
   const getPossibleFutures = (well: number[], pieceId: number, score:number): GameWellState[] => {
     let piece = rotationSystem.placeNewPiece(wellWidth, pieceId)
-
     // move the piece down to a lower position before we have to
     // start pathfinding for it
     // move through empty rows
@@ -98,6 +104,45 @@ const PlayerAi = (options: Options) => (game: Game) => {
 
     return possibleFutures
   }
+  const getHighestBlue = (well: number[]): number => {
+    let row
+    for (row = 0; row < well.length; row++) {
+      if (well[row] !== 0) {
+        break
+      }
+    }
+    return row
+  }
+
+  // deeper lines are worth less than immediate lines
+  // this is so the game will never give you a line if it can avoid it
+  // NOTE: make sure rating doesn't return a range of more than 100 values...
+  const getWellRating = (well: number[], depthRemaining: number): number =>
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    getHighestBlue(well) + (depthRemaining === 0 ? 0 : getWorstPieceDetails(well, depthRemaining - 1).rating / 100)
+
+  /**
+    Given a well and a piece, find the best possible location to put it.
+    Return the best rating found.
+  */
+  const getBestWellRating = (well: number[], pieceId: number, depthRemaining: number): number =>
+    Math.max.apply(Math, getPossibleFutures(well, pieceId,0).map(possibleFuture =>
+      getWellRating(possibleFuture.well, depthRemaining)
+    ))
+
+  // pick the worst piece that could be put into this well
+  const getWorstPieceDetails = (well: number[], depthRemaining: number): {
+    pieceId: number,
+    rating: number
+  } =>
+    Object
+      .keys(rotationSystem.rotations)
+      .map(pieceId => ({
+        pieceId: Number(pieceId),
+        rating: getBestWellRating(well, Number(pieceId), depthRemaining)
+      }))
+      .sort((a, b) => a.rating - b.rating)[0]
+
   const calculateScore = (well:GameWellState,params:number[]): number =>{
     let deadspace = 0 //デットスペース(上下がブロックに囲まれている)の数
     let outstanding = 0 //突出した高低さ(平均との差が4以上)をもつ列の数
@@ -146,23 +191,57 @@ const PlayerAi = (options: Options) => (game: Game) => {
     return ["D","L","D","L"]
   }
   const pickHand = (well: GameWellState,param:number[]): GameWellState => {
-    //console.log(game)
-    //console.log(well)
-    //console.log(well)
-    //console.log( calculateScore(well,[10,10,10]) )
-    let possibleFutures=getPossibleFutures(well.well,well.piece.id,well.score)
+    //パラメータを使ってビームサーチを行う
+    let maxfutureid=0
     let maxscore=-1001001001
-    let maxfuture=undefined
-    possibleFutures.forEach(future => {
-      let score=calculateScore(future,param)
-      if(maxscore<score){
-        maxfuture=future
-        maxscore=score
-      }
+    const queue = new Queue();
+
+    let possiblenextFutures=getPossibleFutures(well.well,well.piece.id,well.score)
+    let scoretofutureid:any[] =[]
+    for(var i=0;i<possiblenextFutures.length;i++){
+      scoretofutureid.push({'id':i,'score':calculateScore(possiblenextFutures[i],param)})
+    }
+    scoretofutureid = scoretofutureid.sort(function (a, b): any {
+      const scoreA = new Number(a['score']);
+      const scoreB = new Number(b['score']);
+      return scoreB > scoreA ? 1 : scoreB < scoreA ? -1 : 0; //sort by score decending
+    });
+    scoretofutureid.slice(0,5).forEach(future=>{
+      possiblenextFutures[future['id']].piece=rotationSystem.placeNewPiece(wellWidth, getWorstPieceDetails(possiblenextFutures[future['id']].well,0).pieceId)
+      queue.push([0+future["score"],1,possiblenextFutures[future['id']],future['id']])
     })
+    
+    while(queue.size()>0){
+      let q_poped=queue.pop()
+      if(q_poped[1]>=3){//深さが3に達したら終わる
+        if(q_poped[0]>maxscore){
+          maxfutureid=q_poped[3]
+          maxscore=q_poped[0]
+        }
+        break
+      }
+      let possibleFutures=getPossibleFutures(q_poped[2].well,q_poped[2].piece.id,q_poped[2].score)
+      let scoretofuture:any[] =[]
+      for(var i=0;i<possibleFutures.length;i++){
+        scoretofuture.push({'future':possibleFutures[i],'score':calculateScore(possibleFutures[i],param)})
+      }
+      scoretofuture = scoretofuture.sort(function (a, b): any {
+        const scoreA = new Number(a['score']);
+        const scoreB = new Number(b['score']);
+        return scoreB > scoreA ? 1 : scoreB < scoreA ? -1 : 0; //sort by score decending
+      });
+      scoretofuture.slice(0,5).forEach(future=>{
+        //次のピース
+        future["future"].piece=rotationSystem.placeNewPiece(wellWidth, getWorstPieceDetails(future["future"].well,0).pieceId)
+        //future["future"].piece=rotationSystem.placeNewPiece(wellWidth, 0)
+        queue.push([q_poped[0]+future["score"],q_poped[1]+1,future["future"],q_poped[3]])
+      })
+    }
+    
+   
     //let move=moves[Math.floor(Math.random() * Math.floor(4))]
-    //console.log(move)
-    return maxfuture
+
+    return possiblenextFutures[maxfutureid]
   }
 
   return (well: GameWellState,param:number[]): GameWellState => pickHand(well,param)

@@ -260,14 +260,14 @@ class Game extends React.Component<GameProps, GameState> {
 
   handleClickAIStart () {
     let aiparams=new Array();
-    for(var i=0;i<100;i++){
+    for(var i=0;i<25;i++){
       aiparams[i]=new Array();
       for(var j=0;j<6;j++){
         aiparams[i][j]=Math.floor(Math.random() * Math.floor(200))-100//-100~100
       }
     }
     let aiscores=new Array();
-    for(var i=0;i<100;i++){
+    for(var i=0;i<25;i++){
       aiscores[i]=0;
     }
     this.setState({
@@ -432,9 +432,10 @@ class Game extends React.Component<GameProps, GameState> {
       if (!(nextWellStateId in nextWellStates)) {
         //パラメータを入力
         const nextWellState = playerAi(wellStates[wellStateId],AIparams[AInumber])
+        this.getNextState(nextWellState, 'D')//スコアの計算とか
         nextWellStates = nextWellStates.slice().concat([nextWellState])
       }
-      this.handleMove('D') //スコアの計算とか
+      //this.handleMove('D') //スコアの計算とか
       const nextWellState = nextWellStates[nextWellStateId]
       // Is the game over?
       // It is impossible to get bits at row (bar - 2) or higher without getting a bit at row (bar - 1),
@@ -469,7 +470,7 @@ class Game extends React.Component<GameProps, GameState> {
         //パラメータとスコアを記録
         const wellState = wellStateId === -1 ? null : wellStates[wellStateId]
         let score = wellState && wellState.score
-        let nextAInumber=AInumber==100-1?0:AInumber+1;
+        let nextAInumber=AInumber==25-1?0:AInumber+1;
         let nextAIscores=AIscores
         nextAIscores[AInumber]=score
         let nextAIparams=AIparams
@@ -485,11 +486,11 @@ class Game extends React.Component<GameProps, GameState> {
           //交配
           //スコアが高い順に10個取り、10*10通りに掛け合わせる(前二つ｜後ろ一つ)
           let scoretonumber:any[] =[]
-          for(var i=0;i<100;i++){
+          for(var i=0;i<25;i++){
             scoretonumber.push({'id':i,'score':nextAIscores[i]})
             nextAImeanscore+=nextAIscores[i]
           }
-          nextAImeanscore/=100.0
+          nextAImeanscore/=25.0
           console.log(scoretonumber)
           scoretonumber = scoretonumber.sort(function (a, b): any {
             const scoreA = new Number(a['score']);
@@ -500,8 +501,8 @@ class Game extends React.Component<GameProps, GameState> {
           nextAItopparam = AIparams[scoretonumber[0]['id']]
           let cnt=0
           nextAItopscore=scoretonumber[0]['score']
-          scoretonumber.slice(0,10).forEach(num1 =>{
-            scoretonumber.slice(0,10).forEach(num2 =>{
+          scoretonumber.slice(0,5).forEach(num1 =>{
+            scoretonumber.slice(0,5).forEach(num2 =>{
               nextAIparams[cnt][0]=AIparams[num1["id"]][0]
               nextAIparams[cnt][1]=AIparams[num1["id"]][1]
               nextAIparams[cnt][2]=AIparams[num1["id"]][2]
